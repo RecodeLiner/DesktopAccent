@@ -1,14 +1,83 @@
-import OperatingSystem.Linux
-import OperatingSystem.Windows
+import OperatingSystem.*
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
-
 const val defaultColor = "0xFF0000FF"
 
+/**
+ * Retrieves the macOS accent color setting.
+ *
+ * This function attempts to read the system-wide accent color setting
+ * from the macOS default system.
+ * The accent color is returned as a
+ * String representation that could be used in the application for
+ * consistent theming with the system settings.
+ *
+ * @return The macOS accent color as a String.
+ * If the accent color cannot
+ *         be determined or an error occurs during the retrieval, a default
+ *         color is returned.
+ * @throws Exception If the process execution fails or an error occurs
+ *         while reading the output.
+ */
+fun getMacOSColor(): String {
+    try {
+        val process = ProcessBuilder("defaults read -g AppleAccentColor")
+            .redirectErrorStream(true)
+            .start()
+
+        process.inputStream.use {
+            val reader = BufferedReader(InputStreamReader(it))
+            val output = reader.readText()
+            if (output.toIntOrNull() == null) {
+                return defaultColor
+            }
+            else {
+                return getColorByNumMacOS(output.toInt())
+            }
+        }
+    } catch (e: Exception) {
+        return defaultColor
+    }
+}
+
+fun isMacOSVersion11OrNewer(): Boolean {
+    try {
+        val process = ProcessBuilder("sw_vers", "-productVersion")
+            .redirectErrorStream(true)
+            .start()
+
+        process.inputStream.use {
+            val reader = BufferedReader(InputStreamReader(it))
+            val output = reader.readLine()
+            val versionComponents = output.trim().split('.')
+            if (versionComponents.size >= 2) {
+                val majorVersion = versionComponents[0].toIntOrNull()
+                return majorVersion != null && majorVersion >= 11
+            }
+        }
+    } catch (_: Exception) {
+        return false
+    }
+    return false
+}
+
+fun getColorByNumMacOS(num: Int):String{
+    return when(num){
+        -1 -> "0x8C8C8C" // GRAPHITE
+        0 -> "0xFF5257" // RED
+        1 -> "0xF7821B" // ORANGE
+        2 -> "0xFFC602" // YELLOW
+        3 -> "0x62BA46" // GREEN
+        4 -> "0xFF0277FF" // BLUE
+        5 -> "0xA550A7" // Purple
+        6 -> "0xF74F9E" // Pink
+        else -> { defaultColor}
+    }
+}
 
 fun getSystemAccent(): String {
     return when (currentOperatingSystem) {
@@ -19,6 +88,16 @@ fun getSystemAccent(): String {
         Linux -> {
 
             getLinuxSystemAccent()
+        }
+
+        MacOS -> {
+            if (isMacOSVersion11OrNewer()){
+                getMacOSColor()
+            }
+            else
+            {
+                defaultColor
+            }
         }
 
         else -> {
@@ -110,9 +189,9 @@ private val currentOperatingSystem: OperatingSystem
         ) {
             Linux
         } else if (operSys.contains("mac")) {
-            OperatingSystem.MacOS
+            MacOS
         } else {
-            OperatingSystem.Unknown
+            Unknown
         }
     }
 
