@@ -25,18 +25,19 @@ const val defaultColor = "0xFF0000FF"
  */
 fun getMacOSColor(): String {
     try {
-        val process = ProcessBuilder("defaults read -g AppleAccentColor")
+        val process = ProcessBuilder("defaults", "read", "-g", "AppleAccentColor")
             .redirectErrorStream(true)
             .start()
 
         process.inputStream.use {
             val reader = BufferedReader(InputStreamReader(it))
             val output = reader.readText()
-            if (output.toIntOrNull() == null) {
+            val num = output.split("\n")[0].split(" ")[0]
+            if (num.toIntOrNull() == null) {
                 return defaultColor
             }
             else {
-                return getColorByNumMacOS(output.toInt())
+                return getColorByNumMacOS(num.toInt())
             }
         }
     } catch (e: Exception) {
